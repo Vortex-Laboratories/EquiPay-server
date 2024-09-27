@@ -1,11 +1,42 @@
-const db = require('../config/firebase');
+const db = require('../config/firebase'); 
+
+const userModel = {
+  userId: '',
+  name: '',
+  email: ''
+};
+
+const checkEmailExists = async (email) => {
+  const usersRef = db.collection('users');
+  const snapshot = await usersRef.where('email', '==', email).get();
+
+  if (!snapshot.empty) {
+    return true;
+  }
+
+  return false; 
+};
 
 
 const createUser = async (userData) => {
   try {
-    const userRef = db.collection('users').doc(userData.userId); 
-    await userRef.set(userData); 
-    return userData; 
+    const emailExists = await checkEmailExists(userData.email);
+    if (emailExists) {
+      throw new Error('Email already exists');
+    }
+
+    const userRef = db.collection('users').doc(); 
+    const userId = userRef.id;  
+
+  
+    const newUser = {
+      ...userModel, 
+      userId,        
+      ...userData    
+    };
+
+    await userRef.set(newUser);  
+    return newUser; 
   } catch (error) {
     throw new Error(`Error creating user: ${error.message}`);
   }
@@ -15,30 +46,19 @@ const createUser = async (userData) => {
 const getUserProfile = async (userId) => {
   try {
     const userRef = db.collection('users').doc(userId); 
-    const doc = await userRef.get();
+    const doc = await userRef.get(); 
     if (!doc.exists) {
       throw new Error('User not found'); 
     }
-    return doc.data(); 
+    return doc.data();
   } catch (error) {
-    throw new Error(`Error fetching user: ${error.message}`);
+    throw new Error(`Error fetching user: ${error.message}`); 
   }
 };
 
-
-const getAllUsers = async () => {
-  try {
-    const usersSnapshot = await db.collection('users').get();
-    const users = [];
-    usersSnapshot.forEach(doc => users.push(doc.data()));
-    return users;
-  } catch (error) {
-    throw new Error(`Error fetching users: ${error.message}`);
-  }
-};
 
 module.exports = {
+  userModel,
   createUser,
-  getUserProfile,
-  getAllUsers
+  getUserProfile
 };
